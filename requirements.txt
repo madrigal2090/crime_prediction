@@ -1,0 +1,17 @@
+pandas
+numpy
+researchpy
+scipy
+geopandas
+seaborn
+plotly
+matplotlib
+glob2
+ephem
+Shapely
+rdrobust
+scikit-plot
+joblib
+python-dateutil
+scikit-learn
+imbalanced-learn
