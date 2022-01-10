@@ -1,6 +1,6 @@
 # Crime Prediction in Mexico City
 
-Using data from the General Prosecutor of Justice of Mexico City, and other sources, this script is intended to predict crimes in Mexico City, using a Balanced Random Forest. 
+Using a Balanced Random Forest with data from the General Prosecutor of Justice of Mexico City, and other sources, this script is intended to predict crimes in Mexico City. 
 
 [A map with the resulting probabilities of the model can be found her.](http://fjmadrigal.pythonanywhere.com/)
 
