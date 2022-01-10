@@ -1,5 +1,5 @@
 
-import os
+
 import pandas as pd
 import numpy as np
 import geopandas as gpd
@@ -11,8 +11,8 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 ## Read Crimes Probabilities DataFrame and transform
-results_brf = pd.read_csv(r"modelo\df_results\reduced_results_brf.csv")
-colonias = pd.read_csv(r"modelo\df_results\reduced_colonias.csv")
+results_brf = pd.read_csv(r"/home/fjmadrigal/mysite/data/reduced_results_brf.csv")
+colonias = pd.read_csv(r"/home/fjmadrigal/mysite/data/reduced_colonias.csv")
 
 results_brf = results_brf.merge(colonias[['id_colonia', 'colonia']],
                                 how='left',
