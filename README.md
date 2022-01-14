@@ -2,7 +2,7 @@
 
 Using a Balanced Random Forest with data from the General Prosecutor of Justice of Mexico City, and other sources, this script is intended to predict crimes in Mexico City. 
 
-[A map with the resulting probabilities of the model can be found her.](http://fjmadrigal.pythonanywhere.com/)
+[A map with the resulting probabilities of the model can be found her.](http://fjmadrigal.pythonanywhere.com/) (It takes a few seconds to load)
 
 Follow this order to see a step by step how the data was transformed and the model was applied:
 
