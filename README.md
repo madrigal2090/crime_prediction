@@ -22,6 +22,3 @@ Follow this order to see a step by step how the data was transformed and the mod
 
 ![Confusion matrix](https://github.com/madrigal2090/crime_prediction/blob/main/figures/conf_matrix/conf_matrix_.svg)
 
-![ROC Curve](https://github.com/madrigal2090/crime_prediction/blob/main/figures/roc_curve/roc_curve_.svg)
-
-
