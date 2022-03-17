@@ -16,7 +16,7 @@ Follow this order to see a step by step how the data was transformed and the mod
    - **F1 Score:** 0.07478332162098851
    - **Accuracy:** 0.9525956997377596
    - **Balanced Accuracy:** 0.5769196984068939
-   - **AUC:** 0.7448168205401235
+   - **Average Precision Score:** 0.027673313
 
 ![Probability Distribution](https://github.com/madrigal2090/crime_prediction/blob/main/figures/prob_dist/prob_dist_.svg)
 
