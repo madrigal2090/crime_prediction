@@ -19,7 +19,7 @@ from imblearn.ensemble import BalancedRandomForestClassifier
 from sklearn.metrics import (classification_report, confusion_matrix,
                              f1_score, precision_score, recall_score,
                              accuracy_score, balanced_accuracy_score,
-                             roc_auc_score,roc_curve)
+                             average_precision_score,precision_recall_curve)
 
 
 
@@ -151,7 +151,7 @@ class SplitTrainAndPredict:
     
     
     def fit_my_results(self, X_train, X_test, y_train, y_test,
-                        n_trees=800, max_feature='sqrt',
+                        n_trees=400, max_feature='sqrt',
                         bal_acc_curve=True):
         
         """
@@ -239,7 +239,8 @@ class SplitTrainAndPredict:
                         threshold=None, brf=None, save_columns=None, 
                         print_res=True,show_dist=True, 
                         show_feature_imp=True,class_report=True,
-                        conf_matrix_graph=True,roc_curve_graph=True,return_res_df=True):
+                        conf_matrix_graph=True,precision_recall_curve_graph=True,
+                        return_res_df=True):
         
         
         
@@ -249,7 +250,7 @@ class SplitTrainAndPredict:
         
         balanced_accuracy_score_ = balanced_accuracy_score(y_test, predictions)
         
-        roc_auc_score_ = roc_auc_score(y_test, crime_prob)
+        average_precision_score_ = average_precision_score(y_test, crime_prob)
         
         precision_score_ = precision_score(y_test, predictions, pos_label=1, average='binary')
         
@@ -265,7 +266,7 @@ class SplitTrainAndPredict:
             
             print(f"   Balanced Accuracy: {balanced_accuracy_score_}")
             
-            print(f"   AUC: {roc_auc_score_}")
+            print(f"   Average Precision Score: {average_precision_score_}")
             
             print("\n")
 
@@ -331,29 +332,32 @@ class SplitTrainAndPredict:
             
             
         ## Graph ROC Curve
-        if roc_curve_graph:
+        if precision_recall_curve_graph:
             
-            fpr, tpr, thresholds = roc_curve(y_test, crime_prob)
+            precision, recall, thresholds = precision_recall_curve(y_test, crime_prob)
 
             fig = plt.figure(figsize=(8, 5))
 
             ax = fig.subplots(1, 1)
 
-            plt.plot(fpr, tpr, color="#2B667C")
-            plt.plot([0, 1], [0,1], color='red')
-
-            plt.xlabel('False positive rate')
-            plt.ylabel('True positive rate')
-            plt.suptitle('ROC Curve', fontsize=16)
+            plt.plot(recall, precision, color="#2B667C")
+            plt.ylim(0,.5)
+            plt.xlim(0,.5)
+            plt.xlabel('Recall')
+            plt.ylabel('Precision')
+            plt.suptitle('Precision-Recall Curve', fontsize=16)
+            plt.xlabel('Recall')
+            plt.ylabel('Precision')
+            plt.suptitle('Precision-Recall Curve', fontsize=16)
             plt.title(f'{self.alcaldi}', fontsize=8)
             
-            if not os.path.isdir(self.create_path_(r"figures\roc_curve")):
+            if not os.path.isdir(self.create_path_(r"figures\precision_recall_curve")):
                 
-                os.makedirs(self.create_path_(r"figures\roc_curve"))
+                os.makedirs(self.create_path_(r"figures\precision_recall_curve"))
                 
-            fig_name = f"roc_curve_{(self.alcaldi).replace('.', '').replace(' ', '_').lower()}.svg"
+            fig_name = f"precision_recall_{(self.alcaldi).replace('.', '').replace(' ', '_').lower()}.svg"
 
-            plt.savefig(self.create_path_(r"figures\roc_curve\\" + fig_name), format='svg', dpi=1200)
+            plt.savefig(self.create_path_(r"figures\precision_recall_curve\\" + fig_name), format='svg', dpi=1200)
             
             plt.show()   
 
@@ -400,7 +404,7 @@ class SplitTrainAndPredict:
                                            "Balanced Accuracy": [balanced_accuracy_score_],
                                            "precision_score": [precision_score_],
                                            "recall_score_": [recall_score_],
-                                           "AUC": [roc_auc_score_]})
+                                           "AUC": [average_precision_score_]})
     
             return save_scores_df
     
