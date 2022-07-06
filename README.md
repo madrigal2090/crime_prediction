@@ -7,18 +7,19 @@ Using a Balanced Random Forest with data from the General Prosecutor of Justice 
 Follow this order to see a step by step how the data was transformed and the model was applied:
 
 - [data_transformation.ipynb](https://github.com/madrigal2090/crime_prediction/blob/main/data_transformation.ipynb): This notebook contains all the code used to create the input information for the model.
-- [modelo_RF_crimenes.ipynb](https://github.com/madrigal2090/crime_prediction/blob/main/modelo_RF_crimenes.ipynb): In this notebook the model was run, using also a [class object model](https://github.com/madrigal2090/crime_prediction/blob/main/apply_brf.py) that contains the steps to run the Balanced Random Forest.
+- [feature_selection.ipynb](https://github.com/madrigal2090/crime_prediction/blob/main/feature_selection.ipynb): A Lasso regression was used to select the best features to run the machine learning models.
+- [models](https://github.com/madrigal2090/crime_prediction/tree/main/models): This directory contains most of the models used to predict crimes. The model with the best performance is from a Balanced Random Forest that was run without using neighborhoods as a dummy variable [shortcut to the notebook](https://github.com/madrigal2090/crime_prediction/blob/main/models/modelo_RF_crimenes-col-non_dummies.ipynb). This directory also contains the *class object* with the steps to run [the Balanced Random Forest](https://github.com/madrigal2090/crime_prediction/blob/main/models/apply_brf.py) and the [Logit regression](https://github.com/madrigal2090/crime_prediction/blob/main/models/apply_logistic.py).
 
-## Aggregated results
+## Aggregated results form the best model
 
-**Results of Balanced Random Forest:**
+**Results of the best Balanced Random Forest:**
 
-   - **F1 Score:** 0.07478332162098851
-   - **Accuracy:** 0.9525956997377596
-   - **Balanced Accuracy:** 0.5769196984068939
-   - **Average Precision Score:** 0.027673313
+   - **F1 Score:** 7.8291%
+   - **Recall:** 15.7226%
+   - **Precision:** 5.2122%
 
-![Probability Distribution](https://github.com/madrigal2090/crime_prediction/blob/main/figures/prob_dist/prob_dist_.svg)
+![Distribution of predicted probabilities](https://github.com/madrigal2090/crime_prediction/blob/main/figures/prob_dist_.svg)
 
-![Confusion matrix](https://github.com/madrigal2090/crime_prediction/blob/main/figures/conf_matrix/conf_matrix_.svg)
+![Confusion matrix](https://github.com/madrigal2090/crime_prediction/blob/main/figures/conf_matrix_.svg)
 
+![Precision-Recall curve](https://github.com/madrigal2090/crime_prediction/blob/main/figures/precision_recall_.svg)
