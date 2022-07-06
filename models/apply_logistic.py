@@ -1,7 +1,6 @@
 
 import os
 import sys
-import pickle
 
 import pandas as pd
 import numpy as np
@@ -16,15 +15,17 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn.metrics import ConfusionMatrixDisplay
-from imblearn.ensemble import BalancedRandomForestClassifier
+#from imblearn.ensemble import BalancedRandomForestClassifier
 from sklearn.metrics import (classification_report, confusion_matrix,
                              f1_score, precision_score, recall_score,
                              accuracy_score, balanced_accuracy_score,
                              average_precision_score,precision_recall_curve)
 
+from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.preprocessing import StandardScaler
 
-
-class SplitTrainAndPredict:
+class SplitTrainAndPredictLogistic:
     
     def __init__(self, copy_df, colonias, alcaldi=""):
         
@@ -40,8 +41,7 @@ class SplitTrainAndPredict:
         return os.path.join(self.path, file_path)
         
     
-    def train_test_df(self, print_info=True,
-                      col_dummies=True):
+    def train_test_df(self, print_info=True):
 
         """
         Create train and test sparse matrix.
@@ -62,19 +62,12 @@ class SplitTrainAndPredict:
         
         ## The test will be the last 3 months of data
         test_cut = copy_df_local['Hora'].max() - relativedelta(months=3)
+    
         
         ## Create dummies
-        if col_dummies:
-            
-            copy_df_local = pd.get_dummies(copy_df_local, columns=['id_colonia', 'day_period', 'dia_semana', 'month'],
-                                           prefix=["colonia", "day_per", "weekday", "month"], sparse=True)
-        
-        if col_dummies is False:
-            
-            copy_df_local = pd.get_dummies(copy_df_local, columns=['day_period', 'dia_semana', 'month'],
-                                           prefix=["day_per", "weekday", "month"], sparse=True)
-            
-        
+        copy_df_local = pd.get_dummies(copy_df_local, columns=['id_colonia', 'day_period', 'dia_semana', 'month'],
+                                       prefix=["colonia", "day_per", "weekday", "month"], drop_first=True)
+
         ## Create the train DataFrame
         X_train = copy_df_local.query('Hora <= @test_cut')
         y_train = X_train['crimen']
@@ -89,20 +82,6 @@ class SplitTrainAndPredict:
         ind_test = X_test['indice']
         X_test = X_test.drop(['Hora', 'crimen', 'indice', 'day', 'year', 'categoria_delito','Coordinates', 'alcaldi'], 
                              axis = 1)
-        
-        
-        if col_dummies is False:
-            
-            X_test = X_test.drop(['id_colonia'], 
-                                 axis = 1)
-            
-            X_train = X_train.drop(['id_colonia'], 
-                                 axis = 1)
-            
-        
-        
-        ## Be sure columns are sorted the same way
-        X_test = X_test[X_train.columns]
 
         if print_info:
             ## Print shapes of datasets
@@ -143,60 +122,85 @@ class SplitTrainAndPredict:
                                               "Obs. Test": [table_test['Absolute'].sum()],
                                               "% Crime Test": [round(table_test.loc[1, "Relative"], 4)*100]})
 
+        
+        ## Scale just the continuos variables
+        scaler_cont_cols = ['past_near_crimes_500mts', 'past_crimes',
+                           'TEMP', 'PRCP', 'CO', 'O3', 'PM10', 'area_km2', 'metro',
+                           'metrobus', 'rtp', 'supers_minisupers', 'department_stores', 'banks',
+                           'corporate_offices', 'restaurants', 'g_edu', 'no_healt_s',
+                           'pop_per_km2', 'house_per_km2']
+
+        ## int scaler
+        scaler = StandardScaler()
+        
+        ## Separate continous variables frim the training dataset adn fit
+        scaler.fit(X_train[scaler_cont_cols])
+        
+        ## Transform
+        X_train_scale = scaler.transform(X_train[scaler_cont_cols])
+        
+        ## Convert to Pandas Dataframe
+        X_train_scale = pd.DataFrame(X_train_scale, columns=scaler_cont_cols)
+        
+        ## Join scaled continuos variables and dummies
+        X_train = X_train.drop(scaler_cont_cols, axis = 1)
+        X_train.reset_index(inplace=True, drop=True)
+        X_train = X_train_scale.join(X_train)
+        
+        
+        ## Scale the x test dataset, but using the same mean and satnadar dev of the train dataset
+        X_test_scale = scaler.transform(X_test[scaler_cont_cols])
+        X_test_scale = pd.DataFrame(X_test_scale, columns=scaler_cont_cols)
+        X_test_scale = X_test_scale.fillna(0)
+        X_test = X_test.drop(scaler_cont_cols, axis = 1)
+        X_test.reset_index(inplace=True)
+        X_test = X_test_scale.join(X_test)
+        
+        ## Be sure columns arev sorted the same way
+        X_test = X_test[X_train.columns]
+        
         ## Convert Pandas DataFrame as Sparse Matrix
         save_columns = X_train.columns
         X_train = X_train.astype(pd.SparseDtype("float", 0)).sparse.to_coo()
         X_test = X_test.astype(pd.SparseDtype("float", 0)).sparse.to_coo()
-        
-        
-        ## Create a folder to save columns names to predict the grid
-        if not os.path.isdir(self.create_path_(r"col_names")):
-
-            os.makedirs(self.create_path_(r"col_names"))
-            
-        col_list_name = f"{(self.alcaldi).replace('.', '').replace(' ', '_').lower()}_col_names.pkl"
-        
-        pickle.dump(save_columns, open(self.create_path_(r"col_names\\" + col_list_name), "wb"))
 
         return X_train, X_test, y_train, y_test, save_columns, ind_test
     
     
     def fit_my_results(self, X_train, X_test, y_train, y_test,
-                        n_trees=1000, max_feature='sqrt',
                         bal_acc_curve=True):
         
         """
-        Show results of Balanced Random Forest
+        Show results of Logistic Regression
         """
         
         ## Fit the model
-        brf = BalancedRandomForestClassifier(n_estimators= n_trees,
-                                             max_features = max_feature,
-                                             sampling_strategy = 'not minority',
-                                             bootstrap = True).fit(X_train, y_train)
+        logistic = LogisticRegressionCV(max_iter=5000, 
+                                        cv=StratifiedShuffleSplit(n_splits=5), Cs=10,
+                                        scoring='f1', verbose=1).fit(X_train, y_train)
         
-        ## Create a folder to save the Balanced Random Forest
-        if not os.path.isdir(self.create_path_(r"brf_models")):
+        ## Create a folder to save the Logistic Regression Model
+        if not os.path.isdir(self.create_path_(r"logistic_models")):
 
-            os.makedirs(self.create_path_(r"brf_models"))
+            os.makedirs(self.create_path_(r"logistic_models"))
             
-        ## Save the Balanced Random Forest model
+        ## Save the BLogistic Regression
          
-        file_name = f"{(self.alcaldi).replace('.', '').replace(' ', '_').lower()}_brf_model.joblib"
-        dump(brf, self.create_path_(r"brf_models\\" + file_name)) 
+        file_name = f"{(self.alcaldi).replace('.', '').replace(' ', '_').lower()}_logistic_model.joblib"
+        dump(logistic, self.create_path_(r"logistic_models\\" + file_name)) 
         # To load again:
-        #     brf = load('filename.joblib')
+        #     logistic = load('filename.joblib')
         
         ## Estimate probabilities
-        brf_pred_prob = brf.predict_proba(X_test)
+        logistic_pred_prob = logistic.predict_proba(X_test)
 
         ## Extract probability of crimes or ones
-        crime_prob = [prob[1] for prob in brf_pred_prob]
+        crime_prob = [prob[1] for prob in logistic_pred_prob]
         
         ## Create a grid of thresholds
         thresholds = [x/1000 for x in range(1, 1000)]
 
-        ## Using crime probabilities form the Random Forest, create a list of arrays with 
+        ## Using crime probabilities from the Logistic Regression, create a list of arrays with 
         # the predicted class, using the list of thresholds
         y_pred_thresholds = [(np.array(crime_prob) > threshold).astype('float') 
                              for threshold in thresholds]
@@ -211,13 +215,6 @@ class SplitTrainAndPredict:
         ## Based on the threshol that maximize the f1_score, calculate the crime predictions
         predictions = (np.array(crime_prob) > threshold).astype('float')
         
-        print("Fitted Balanced Random Forest:\n")
-            
-        print(f"   Number of trees: {n_trees}")
-            
-        print(f"   Max features: {max_feature}")
-        
-        print(f"   Threshold that max F1: {threshold}\n")
         
         ## Graph f1_score curve
         if bal_acc_curve:
@@ -244,12 +241,11 @@ class SplitTrainAndPredict:
 
             plt.show()
         
-        return brf, predictions, crime_prob, threshold
+        return logistic, predictions, crime_prob, threshold
     
     def show_my_results(self, y_test, crime_prob, predictions,
-                        threshold=None, brf=None, save_columns=None, 
-                        print_res=True,show_dist=True, 
-                        show_feature_imp=False,class_report=True,
+                        threshold=None, logistic=None, save_columns=None, 
+                        print_res=True,show_dist=True,class_report=True,
                         conf_matrix_graph=True,precision_recall_curve_graph=True,
                         return_res_df=True):
         
@@ -269,7 +265,7 @@ class SplitTrainAndPredict:
   
         if print_res:
             
-            print("Results of Balanced Random Forest:\n")
+            print("Results of Logistic Regression:\n")
             
             print(f"   F1 Score: {f1_score_}")
             
@@ -371,44 +367,11 @@ class SplitTrainAndPredict:
             plt.savefig(self.create_path_(r"figures\precision_recall_curve\\" + fig_name), format='svg', dpi=1200)
             
             plt.show()   
-
-        if show_feature_imp and save_columns is not None and brf is not None:
-
-            # Calculamos la imrpotancia de cada variable
-            feature_imp = pd.Series(brf.feature_importances_,index=save_columns).sort_values(ascending=False)
-
-            ## Graph Features Importance
-            fig = plt.figure(figsize=(5, 8))
-
-            ax = fig.subplots(1, 1)
-
-            sns.barplot(x=feature_imp[:20], y=feature_imp[:20].index, ax=ax)
-            
-            plt.xlabel('Importance')
-            
-            plt.ylabel('Features')
-            
-            plt.suptitle('Features Importance', fontsize=16)
-            plt.title(f'{self.alcaldi}', fontsize=8)
-
-            if not os.path.isdir(self.create_path_(r"figures\feature_imp")):
-                
-                os.makedirs(self.create_path_(r"figures\feature_imp"))
-                
-            fig_name = f"feature_imp_{(self.alcaldi).replace('.', '').replace(' ', '_').lower()}.svg"
-
-            plt.savefig(self.create_path_(r"figures\feature_imp\\" + fig_name), format='svg', dpi=1200)
-            
-            plt.show()
-             
-        
-        
+     
         if return_res_df:
             
             ## Create a DataFrame to save all this results
             save_scores_df = pd.DataFrame({"Alcaldia": [self.alcaldi],
-                                           "Number of trees": [getattr(brf, 'n_estimators')],
-                                           "Max features":[getattr(brf, 'max_features')],
                                            "Threshold": [threshold],
                                            "F1 Score": [f1_score_],
                                            "Accuracy": [accuracy_score_],
